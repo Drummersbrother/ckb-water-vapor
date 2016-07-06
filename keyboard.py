@@ -28,6 +28,7 @@ import sys
 
 platform = sys.platform
 
+
 class Keyboard(object):
     """This class represents a keyboard connected to the ckb-daemon."""
 
@@ -47,7 +48,8 @@ class Keyboard(object):
 
             else:
                 # ckb-daemon is not running or it isn't installed
-                print("ckb-daemon isn't running, (or isn't installed). Please install and/or run ckb-daemon and try again.")
+                print(
+                    "ckb-daemon isn't running, (or isn't installed). Please install and/or run ckb-daemon and try again.")
 
         elif platform.startswith("darwin"):
             # We're on macOS, elegancy and simplicity FTW!
@@ -58,7 +60,8 @@ class Keyboard(object):
 
             else:
                 # ckb-daemon is not running or it isn't installed
-                print("ckb-daemon isn't running, (or isn't installed). Please install and/or run ckb-daemon and try again.")
+                print(
+                    "ckb-daemon isn't running, (or isn't installed). Please install and/or run ckb-daemon and try again.")
 
         else:
             # Who the fuck runs anything other than linux and macOS nowadays!?
@@ -85,7 +88,7 @@ class Keyboard(object):
                 # We load the features file for the current device and check if the first line is a supported device identifier
                 with open(self.prefix + "ckb" + str(i) + "/features") as features:
 
-                    if " ".join(features.readline().split(" ")[:2]) in config_supported_devices:
+                    if " ".join(features.read().split(" ")[:2]) in config_supported_devices:
                         # The device is supported, so we append the device number
                         supported_devices.append(i)
 
@@ -102,42 +105,101 @@ class Keyboard(object):
                 self.keyboard_path = self.prefix + "ckb" + str(supported_devices[0]) + "/"
 
             else:
-                # There are more than 1 supported keyboard connected, so we make the user choose between them
-                for index, val in enumerate(supported_devices):
-                    # We make a dict mapping user options to device numbers
-                    choice_dict = {str(key + 1): value for (key, value) in enumerate(supported_devices)}
+                # We make a dict mapping user options to device numbers
+                choice_dict = {str(key + 1): value for (key, value) in enumerate(supported_devices)}
 
-                    # We ask the user to choose between their devices
-                    print("Please input a number corresponding to which of your connected keyboards you want to use.\nHere are the connected keyboards:")
-                    # We loop through all the choices and output info about that device in a user readable format
-                    for key in choice_dict:
-                        with open(self.prefix + "ckb" + str(choice_dict[key])) as features:
-                            # The 38 is the number of chars between the beginning of the line and the device name
-                            print("\tNr. {0:s}: {1:s}".format(key, features.readline()[self.prefix + 38:-1]))
+                # We ask the user to choose between their devices
+                print(
+                    "Please input a number corresponding to which of your connected keyboards you want to use.\nHere are the connected keyboards:")
+                # We loop through all the choices and output info about that device in a user readable format
+                for key in choice_dict:
+                    with open(self.prefix + "ckb" + str(choice_dict[key])) as features:
+                        # The 38 is the number of chars between the beginning of the line and the device name
+                        print("\tNr. {0:s}: {1:s}".format(key, features.readline()[self.prefix + 38:-1]))
 
-                    # We force the user to provide proper input or exit
-                    while True:
-                        choice = input("Please input a valid number:")
+                # We force the user to provide proper input or exit
+                while True:
+                    choice = input("Please input a valid number:")
 
-                        # We check if the choice was a valid one
-                        if choice in choice_dict:
-                            # We save the path and number of the supported keyboard
-                            self.keyboard_path = self.prefix + "ckb" + str(choice_dict[choice]) + "/"
+                    # We check if the choice was a valid one
+                    if choice in choice_dict:
+                        # We save the path and number of the supported keyboard
+                        self.keyboard_path = self.prefix + "ckb" + str(choice_dict[choice]) + "/"
 
-                            # We break out of the while loop
-                            break
+                        # We break out of the while loop
+                        break
 
         else:
             # There are no connected devices, so we tell the user to connect a keyboard and try again
-            print("You have not connected any keyboard, please connect a keyboard and try again.")
+            print("You don't have any connected keyboards, please connect a keyboard and try again.")
             exit()
-
 
         # We have a supported keyboard with it's path, so we print out some info about it
         with open(self.keyboard_path + "model") as model_file:
-            print("Using keyboard: " + model_file.read())
+            print("Using keyboard: " + model_file.read().strip())
             # We seek back to the file beginning to read it again
             model_file.seek(0)
 
             # We save the keyboard name for future usage
             self.verbose_name = model_file.read()
+
+        # We open the pollrate file and save the pollrate
+        with open(self.keyboard_path + "pollrate") as pollrate_file:
+            # We parse and save the pollrate
+            self.pollrate = int(pollrate_file.read()[:1])
+
+        # We open the features file and save the list of features the device supports
+        with open(self.keyboard_path + "features") as features_file:
+            # We parse and save the supported features
+            self.features = features_file.read().split(" ")[2:]
+
+        # We open the serial file and save the serial number of the device
+        with open(self.keyboard_path + "serial") as serial_file:
+            # We save the contents of the serial file
+            self.serial = serial_file.read().strip()
+
+    def __str__(self):
+        """This method provides a string representation of the keyboard object."""
+        return "keyboard.Keyboard object:\nKeyboard name: {0:s}\nKeyboard serial number: {1:s}\nKeyboard pollrate: {2:d} ms\nKeyboard path: {3:s}\nKeyboard features: {4:s}".format(
+            self.verbose_name.strip(), self.serial, self.pollrate, self.keyboard_path, ", ".join(self.features))
+
+    def execute_command(self, cmd):
+        """This method is used to use a string as a command to the daemon, only use this if you know what you're doing."""
+
+        # We open the cmd file and write the command into it
+        with open(self.keyboard_path + "cmd", mode="a") as cmd_file:
+            # We append the command string and a newline
+            cmd_file.write(cmd + "\n")
+
+            # We flush the file to get the command written ASAP
+            cmd_file.flush()
+
+    def set_key_color(self, key, rgb):
+        """This method is used to set a key to a certain rgb (represented as a tuple of ints) color."""
+
+        # We check that the input is valid, else we throw a valueerror
+        if key.replace("_", "").replace("").isalnum():
+            # Check if the rgb values are valid
+            if max([(int(x) > 255 or int(x) < 0) for x in rgb]) or len(rgb) != 3:
+                # The colour values are invalid so we raise valueerror
+                raise ValueError
+
+            else:
+                # All arguments are valid, so we execute the command
+                self.execute_command("rgb " + key + ":" + "".join([str(format(int(x), "02x")) for x in rgb]))
+
+        else:
+            # We raise a ValueError
+            raise ValueError
+
+    def set_full_color(self, rgb):
+        """This method is used to set the whole keyboard to a certain rgb (represented as a tuple of ints) color."""
+
+        # Check if the rgb values are valid
+        if max([(int(x) > 255 or int(x) < 0) for x in rgb]) or len(rgb) != 3:
+            # The colour values are invalid so we raise valueerror
+            raise ValueError
+
+        else:
+            # The rgb values are valid, so we execute the command
+            self.execute_command("rgb " + "".join([str(format(int(x), "02x")) for x in rgb]))

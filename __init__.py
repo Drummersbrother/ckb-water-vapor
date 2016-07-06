@@ -29,7 +29,7 @@ def main():
     # We get the keyboard, if there isn't any keyboards connected, the program will exit here
     keyboard = keyboard_file.Keyboard()
 
-
+    print(keyboard)
 
 if __name__ == "__main__":
     main()
