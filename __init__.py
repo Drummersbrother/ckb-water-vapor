@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2016 Drummersbrother
+Copyright (c) 2016 Hugo Berg
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -23,9 +21,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+import keyboard as keyboard_file
 
 def main():
-    pass
+    """The main method of the project."""
+
+    # We get the keyboard, if there isn't any keyboards connected, the program will exit here
+    keyboard = keyboard_file.Keyboard()
+
+
 
 if __name__ == "__main__":
     main()
