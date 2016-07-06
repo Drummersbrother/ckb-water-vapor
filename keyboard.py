@@ -30,9 +30,14 @@ platform = sys.platform
 
 
 class Keyboard(object):
-    """This class represents a keyboard connected to the ckb-daemon."""
+    """This class represents a keyboard connected to the ckb-daemon.
+    This class is supposed to be used quite like a file-descriptor, use it with a with statement.
+    """
 
     def __init__(self):
+        pass
+
+    def __enter__(self):
         """Creates a keyboard object if there is one connected.
         If there are multiple keyboards connected, it prompts the user to choose between them.
         If there are no no keyboards connected, it tells the user to connect one and then exits the program.
@@ -158,6 +163,17 @@ class Keyboard(object):
             # We save the contents of the serial file
             self.serial = serial_file.read().strip()
 
+        # We make this device go into software controlled mode
+        self.execute_command("active")
+
+        return self
+
+    def __exit__(self, *args):
+        """This method is called when the instance exits the with statement and needs to be closed again."""
+
+        # We make this device go back to hardware controlled mode
+        self.execute_command("idle")
+
     def __str__(self):
         """This method provides a string representation of the keyboard object."""
         return "keyboard.Keyboard object:\nKeyboard name: {0:s}\nKeyboard serial number: {1:s}\nKeyboard pollrate: {2:d} ms\nKeyboard path: {3:s}\nKeyboard features: {4:s}".format(
@@ -167,7 +183,7 @@ class Keyboard(object):
         """This method is used to use a string as a command to the daemon, only use this if you know what you're doing."""
 
         # We open the cmd file and write the command into it
-        with open(self.keyboard_path + "cmd", mode="a") as cmd_file:
+        with open(self.keyboard_path + "cmd", mode="w") as cmd_file:
             # We append the command string and a newline
             cmd_file.write(cmd + "\n")
 
@@ -178,7 +194,7 @@ class Keyboard(object):
         """This method is used to set a key to a certain rgb (represented as a tuple of ints) color."""
 
         # We check that the input is valid, else we throw a valueerror
-        if key.replace("_", "").replace("").isalnum():
+        if key.replace("_", "").replace(",", "").isalnum():
             # Check if the rgb values are valid
             if max([(int(x) > 255 or int(x) < 0) for x in rgb]) or len(rgb) != 3:
                 # The colour values are invalid so we raise valueerror

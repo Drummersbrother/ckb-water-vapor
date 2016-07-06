@@ -21,15 +21,29 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+import math
+import time
+
 import keyboard as keyboard_file
+
 
 def main():
     """The main method of the project."""
 
     # We get the keyboard, if there isn't any keyboards connected, the program will exit here
-    keyboard = keyboard_file.Keyboard()
+    with keyboard_file.Keyboard() as keyboard:
 
-    print(keyboard)
+        print(keyboard)
+
+        keyboard.execute_command("fps 30")
+
+        curr_x = 0
+
+        while True:
+            time.sleep(1/60)
+            curr_x = (curr_x + 1 / 30) % (math.pi * 2)
+            keyboard.set_full_color((int(200 * (math.sin(curr_x) + 1) / 2), int(200 * (math.sin(curr_x) + 1) / 2), int(255 * (math.sin(curr_x) + 1) / 2)))
+
 
 if __name__ == "__main__":
     main()
