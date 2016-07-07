@@ -43,7 +43,7 @@ def main():
 
         while True:
             time.sleep(1 / 30)
-            curr_x += math.pi / 100
+            curr_x += math.pi / 300
             curr_x %= math.pi * 2
             keyboard.set_multiple_colors([("w,a,s,d,up,left,down,right", (int(255 * (math.sin(curr_x) + 1) / 2), ) * 3)], (int(255 * (math.sin(curr_x) + 1) / 2), 0, 0))
 

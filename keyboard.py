@@ -29,6 +29,8 @@ import sys
 import threading
 import time
 
+import falcon
+
 platform = sys.platform
 
 
@@ -295,32 +297,37 @@ class Keyboard(object):
     def set_key_color(self, key, rgb):
         """This method is used to set a key to a certain rgb (represented as a tuple of ints) color."""
 
-        # We check that the input is valid, else we throw a valueerror
+        # We check that the input is valid, else we return False
         if key.replace("_", "").replace(",", "").isalnum():
             # Check if the rgb values are valid
             if max([(int(x) > 255 or int(x) < 0) for x in rgb]) or len(rgb) != 3:
-                # The colour values are invalid so we raise valueerror
-                raise ValueError
+                # The colour values are invalid so we return False
+                return False
 
             else:
                 # All arguments are valid, so we execute the command
                 self.execute_command("rgb " + key + ":" + "".join([str(format(int(x), "02x")) for x in rgb]))
 
+                # We return True to indicate success
+                return True
+
         else:
-            # We raise a ValueError
-            raise ValueError
+            # We return False
+            return False
 
     def set_full_color(self, rgb):
         """This method is used to set the whole keyboard to a certain rgb (represented as a tuple of ints) color."""
 
         # Check if the rgb values are valid
         if max([(int(x) > 255 or int(x) < 0) for x in rgb]) or len(rgb) != 3:
-            # The colour values are invalid so we raise valueerror
-            raise ValueError
+            # The colour values are invalid so we return False
+            return False
 
         else:
             # The rgb values are valid, so we execute the command
             self.execute_command("rgb " + "".join([str(format(int(x), "02x")) for x in rgb]))
+            # We return True to indicate success
+            return True
 
     def set_multiple_colors(self, keys_and_colors, background=None):
         """This method is used to set multiple keys and (not required) the background to different colors using a single ckb-daemon command.
@@ -342,8 +349,8 @@ class Keyboard(object):
                 if pair[0].replace("_", "").replace(",", "").isalnum():
                     # Check if the rgb values are valid
                     if max([(int(x) > 255 or int(x) < 0) for x in pair[1]]) or len(pair[1]) != 3:
-                        # The colour values are invalid so we raise valueerror
-                        raise ValueError
+                        # The colour values are invalid so we return False
+                        return False
 
                     else:
                         # If the arguments were valid we append a string for the pair to the individual key part of the command
@@ -351,24 +358,29 @@ class Keyboard(object):
                             [str(format(int(x), "02x")) for x in pair[1]])
 
                 else:
-                    # We raise a ValueError because the key name is not valid
-                    raise ValueError
+                    # We return False because the key name is not valid
+                    return False
 
         # We check if the user specified a background color for the command
         if background is not None:
 
             # We check that the background rgb values are valid
             if max([(int(x) > 255 or int(x) < 0) for x in background]) or len(background) != 3:
-                # We raise a ValueError because the background rgb values are invalid
-                raise ValueError
+                # We return False because the background rgb values are invalid
+                return False
 
             # We execute the command with the background part
             self.execute_command(
                 "rgb " + "".join([str(format(int(x), "02x")) for x in background]) + keys_and_colors_command)
 
+            # We return True to indicate success
+            return True
+
         else:
             # We execute the command without the background part
             self.execute_command("rgb " + keys_and_colors_command)
+            # We return True to indicate success
+            return True
 
     def cmd_set_fps(self, fps):
         """This method is used to set the driver update frequence in updates per second (the fps argument)"""
@@ -403,3 +415,118 @@ class Keyboard(object):
         else:
             # The list of keys is valid, so we execute the notify command
             self.execute_command("@" + str(self.notify_node_nr) + " notify " + ":off ".join(keys) + ":off")
+
+class Keyboard_Falcon_Api(object):
+    """This class represents and handler the HTTP REST api for a keyboard object."""
+
+    def __init__(self, keyboard):
+        """This method initialises the API."""
+
+        # The list of dict that describe what commands can be used via HTTP POST requests
+        self.post_commands = [
+            dict(command="rgb_change_single", method=self.cmd_post_rgb_change_single)
+        ]
+
+        self.keyboard = keyboard.__enter__()
+
+    def on_get(self, req, resp):
+        """This method handles all get requests to our API."""
+
+        # The requester has to be able to accept json
+        if req.client_accepts_json:
+            # Everything went ok
+            resp.status = falcon.HTTP_200
+
+            # We return the string representation of the keyboard
+            resp.body = json.dumps({"keyboard": str(self.keyboard)})
+
+        else:
+            # Fuck you user
+            resp.status = falcon.HTTP_417
+
+    def on_post(self, req, resp):
+        """This method handles all post requests to our API."""
+
+        # The requester has to be able to accept json
+        if req.client_accepts_json:
+
+            try:
+                if req.content_length in (0, None):
+                    raise json.JSONDecodeError
+
+                req_body = req.stream.read().decode("utf-8")
+
+                # We try to parse the request as json
+                post_params = json.loads(req_body)
+
+                # We check that the arguments exist and are valid
+                if post_params["command"]:
+                    # We check what command was used
+                    for command in self.post_commands:
+                        # We check if the current request matches the command
+                        if post_params["command"] == command["command"]:
+                            # We call the command method with the request object, response object, and the parsed request dictionary
+                            command["method"](req, resp, post_params)
+
+                            # No more than one command shall be executed per request
+                            break
+                    else:
+                        # If no command was found we return bad request
+                        resp.status = falcon.HTTP_400
+                        resp.body = json.dumps({"message" : "Invalid command"})
+
+                else:
+                    # Invalid arguments
+                    resp.status = falcon.HTTP_400
+                    resp.body = json.dumps({"message": "Invalid arguments"})
+
+                # We're done now
+                return
+
+            except json.JSONDecodeError as e:
+                resp.status = falcon.HTTP_400
+                resp.body = json.dumps({"message" : "Invalid JSON"})
+
+        else:
+            # Fuck you user
+            resp.status = falcon.HTTP_417
+
+    def cmd_post_rgb_change_single(self, req, resp, post_params):
+        """This method handles changing the kyes of the keyboard to a single colour."""
+
+        # We check if all arguments exist
+        if post_params["arguments"]["key"] and post_params["arguments"]["color"]:
+            if self.is_hex_color(post_params["arguments"]["color"]):
+
+                # We check if the command executed successfully
+                if self.keyboard.set_key_color(post_params["arguments"]["key"], (
+                int(post_params["arguments"]["color"][:2], base=16), int(post_params["arguments"]["color"][2:4], base=16),
+                int(post_params["arguments"]["color"][4:], base=16))):
+                    # Successfully executed the command
+                    resp.status = falcon.HTTP_200
+                    resp.body = json.dumps({"message": "Command successfully executed"})
+
+                    return
+
+                else:
+                    # Invalid arguments
+                    resp.status = falcon.HTTP_400
+                    resp.body = json.dumps({"message": "Invalid arguments"})
+
+            else:
+                # Invalid arguments
+                resp.status = falcon.HTTP_400
+                resp.body = json.dumps({"message": "Invalid arguments"})
+
+        else:
+            # Invalid arguments
+            resp.status = falcon.HTTP_400
+            resp.body = json.dumps({"message": "Invalid arguments"})
+
+    def is_hex_color(self, string):
+        """This method returns true if string is a properly formatted (lower case) hex color."""
+
+        if len(string) != 6:
+            return False
+
+        return all(c in set("1234567890abcdef") for c in string)
