@@ -33,17 +33,19 @@ def main():
     # We get the keyboard, if there isn't any keyboards connected, the program will exit here
     with keyboard_file.Keyboard() as keyboard:
 
+        # We print information about the keyboard object
         print(keyboard)
 
-        keyboard.execute_command("fps 30")
+        # We set the keyboard fps to 30
+        keyboard.cmd_set_fps(30)
 
         curr_x = 0
 
         while True:
-            time.sleep(1/60)
-            curr_x = (curr_x + 1 / 30) % (math.pi * 2)
-            keyboard.set_full_color((int(200 * (math.sin(curr_x) + 1) / 2), int(200 * (math.sin(curr_x) + 1) / 2), int(255 * (math.sin(curr_x) + 1) / 2)))
-
+            time.sleep(1 / 30)
+            curr_x += math.pi / 100
+            curr_x %= math.pi * 2
+            keyboard.set_multiple_colors([("w,a,s,d,up,left,down,right", (int(255 * (math.sin(curr_x) + 1) / 2), ) * 3)], (int(255 * (math.sin(curr_x) + 1) / 2), 0, 0))
 
 if __name__ == "__main__":
     main()

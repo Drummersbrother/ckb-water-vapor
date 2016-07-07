@@ -24,7 +24,10 @@ DEALINGS IN THE SOFTWARE.
 
 import json
 import os.path
+import select
 import sys
+import threading
+import time
 
 platform = sys.platform
 
@@ -33,9 +36,6 @@ class Keyboard(object):
     """This class represents a keyboard connected to the ckb-daemon.
     This class is supposed to be used quite like a file-descriptor, use it with a with statement.
     """
-
-    def __init__(self):
-        pass
 
     def __enter__(self):
         """Creates a keyboard object if there is one connected.
@@ -163,6 +163,48 @@ class Keyboard(object):
             # We save the contents of the serial file
             self.serial = serial_file.read().strip()
 
+        # The list of notify node numbers that are being used
+        used_notify_nodes = []
+
+        # We check what notifying nodes are being used
+        for i in range(1, 10):
+            # We check if the file exists as a notifying node
+            if os.path.isfile(self.keyboard_path + "notify" + str(i)):
+                # We append the number to the list of used nodes
+                used_notify_nodes.append(i)
+
+        # We find a notify node number that isn't used
+        # If all notify nodes are being used we tell the user that there aren't any nodes available and exit
+        for i in range(1, 10):
+            # We check if the node number is used
+            if i not in used_notify_nodes:
+                # We save the notify node number
+                self.notify_node_nr = i
+                break
+        else:
+            # If we didn't find a notify node number that wasn't used, we tell the user to check what programs are using the keyboard and try again
+            print("All notifying nodes are being used, please check what programs are using the keyboard and try again.")
+            exit()
+
+        # We create various Lock objects to mak the whole class thread-safe
+        self.cmd_lock = threading.Lock()
+        self.notify_lock = threading.Lock()
+
+        # We found a notify node, so we register it to the daemon for this keyboard
+        self.execute_command("notifyon " + str(self.notify_node_nr))
+
+        # We save the notify path for the keyboard
+        self.notify_path = self.keyboard_path + "notify" + str(self.notify_node_nr)
+
+        # We wait for the notification file to exist
+        timeout = time.time() + 2
+        while not os.path.exists(self.notify_path) and time.time() < timeout:
+            time.sleep(0.01)
+        if not os.path.exists(self.notify_path):
+            # The daemon didn't create the notification file fast enough
+            print("Failed to create notification file before timeout.")
+            exit()
+
         # We make this device go into software controlled mode
         self.execute_command("active")
 
@@ -171,24 +213,84 @@ class Keyboard(object):
     def __exit__(self, *args):
         """This method is called when the instance exits the with statement and needs to be closed again."""
 
+        # We close the notifying node for this device
+        self.execute_command("notifyoff " + str(self.notify_node_nr))
+
         # We make this device go back to hardware controlled mode
         self.execute_command("idle")
 
     def __str__(self):
         """This method provides a string representation of the keyboard object."""
-        return "keyboard.Keyboard object:\nKeyboard name: {0:s}\nKeyboard serial number: {1:s}\nKeyboard pollrate: {2:d} ms\nKeyboard path: {3:s}\nKeyboard features: {4:s}".format(
-            self.verbose_name.strip(), self.serial, self.pollrate, self.keyboard_path, ", ".join(self.features))
+        return "keyboard.Keyboard object:\nKeyboard name: {0:s}\nKeyboard serial number: {1:s}\nKeyboard pollrate: {2:d} ms\nKeyboard path: {3:s}\nKeyboard notify node path: {4:s}\nKeyboard features: {5:s}".format(
+            self.verbose_name.strip(), self.serial, self.pollrate, self.keyboard_path, self.notify_path, ", ".join(self.features))
 
     def execute_command(self, cmd):
         """This method is used to use a string as a command to the daemon, only use this if you know what you're doing."""
 
-        # We open the cmd file and write the command into it
-        with open(self.keyboard_path + "cmd", mode="w") as cmd_file:
-            # We append the command string and a newline
-            cmd_file.write(cmd + "\n")
+        # We do the file-writing with a lock to ensure thread-safety
+        with self.cmd_lock:
+            # We open the cmd file and write the command into it
+            with open(self.keyboard_path + "cmd", mode="w") as cmd_file:
+                # We append the command string and a newline
+                cmd_file.write(cmd + "\n")
 
-            # We flush the file to get the command written ASAP
-            cmd_file.flush()
+                # We flush the file to get the command written ASAP
+                cmd_file.flush()
+
+    def get_notifications(self):
+        """This method is used to get the unread notifications from the keyboard in the form of four lists.
+        The first is the list of regular keys that have been pressed since the last read.
+        The second is the list of regular keys that have been released since the last read.
+        The third is the list of indicator LEDs that have been turned on since the last read.
+        The fourth is the list of indicator LEDs that have been turned off since the last read
+        """
+
+        # FIXME This is not getting notifications, I'm not seeing them at all actually, how the fuck do I get his to work??!??
+
+        # The list of regular keys that have been pressed since the last read
+        regular_pressed = []
+        # The list of regular keys that have been released since the last read
+        regular_released = []
+        # The list of indicator LEDs that have been turned on since the last read
+        indicator_on = []
+        # The list of indicator LEDs that have been turned off since the last read
+        indicator_off = []
+
+        # We do the file-reading with a lock to ensure thread-safety
+        with self.notify_lock:
+            notify_raw_content = ""
+            # We read and save the contents of the notify file for the keyboards
+            try:
+                notify_file = os.open(self.notify_path, os.O_NONBLOCK | os.O_RDONLY)
+                # Wait for readable data or errors, and we timeout after 1 / 120 seconds
+                read_events, write_events, error_events = select.select([notify_file], [], [notify_file], 1 / 120)
+                notify_raw_content = os.read(notify_file, 2)
+                print(notify_raw_content)
+                if error_events:
+                    print("Error events %s" % error_events)
+
+                if read_events:
+                    notify_raw_content = notify_file.read()
+                    print(notify_raw_content)
+
+                os.close(notify_file)
+
+            except OSError as e:
+                if e.errno == 11:
+                    os.close(notify_file)
+                    pass
+                else:
+                    print(e)
+                    os.close(notify_file)
+                    exit()
+
+            else:
+                notify_raw_content = ""
+
+        # We make a list of all the separate words in the notify file, by splitting the content by space
+        notify_content = [x.strip() for x in notify_raw_content.split(" ") if len(x)]
+
+        return notify_content
 
     def set_key_color(self, key, rgb):
         """This method is used to set a key to a certain rgb (represented as a tuple of ints) color."""
@@ -219,3 +321,85 @@ class Keyboard(object):
         else:
             # The rgb values are valid, so we execute the command
             self.execute_command("rgb " + "".join([str(format(int(x), "02x")) for x in rgb]))
+
+    def set_multiple_colors(self, keys_and_colors, background=None):
+        """This method is used to set multiple keys and (not required) the background to different colors using a single ckb-daemon command.
+        keys_and_colors shall be structured like [("w,a,s,d", (255, 255, 0)), ("esc,caps", (0, 0, 255)))]
+        """
+
+        # We check that we got keys or background
+        if len(keys_and_colors) == 0 and background is None:
+            return
+
+        # The part of the finished command that is going to be the individual or groups of keys
+        keys_and_colors_command = ""
+
+        # We got valid arguments, so we check if we should use the key list
+        if len(keys_and_colors) != 0:
+
+            # We loop through the list to validate all the key and color pairs
+            for pair in keys_and_colors:
+                if pair[0].replace("_", "").replace(",", "").isalnum():
+                    # Check if the rgb values are valid
+                    if max([(int(x) > 255 or int(x) < 0) for x in pair[1]]) or len(pair[1]) != 3:
+                        # The colour values are invalid so we raise valueerror
+                        raise ValueError
+
+                    else:
+                        # If the arguments were valid we append a string for the pair to the individual key part of the command
+                        keys_and_colors_command += " " + pair[0] + ":" + "".join(
+                            [str(format(int(x), "02x")) for x in pair[1]])
+
+                else:
+                    # We raise a ValueError because the key name is not valid
+                    raise ValueError
+
+        # We check if the user specified a background color for the command
+        if background is not None:
+
+            # We check that the background rgb values are valid
+            if max([(int(x) > 255 or int(x) < 0) for x in background]) or len(background) != 3:
+                # We raise a ValueError because the background rgb values are invalid
+                raise ValueError
+
+            # We execute the command with the background part
+            self.execute_command(
+                "rgb " + "".join([str(format(int(x), "02x")) for x in background]) + keys_and_colors_command)
+
+        else:
+            # We execute the command without the background part
+            self.execute_command("rgb " + keys_and_colors_command)
+
+    def cmd_set_fps(self, fps):
+        """This method is used to set the driver update frequence in updates per second (the fps argument)"""
+
+        # We check that the input fps is valid
+        if 61 > int(fps) > 0:
+            # The input is valid, so we execute the fps command
+            self.execute_command("fps {0:d}".format(int(fps)))
+
+        else:
+            # The input is invalid so we raise a ValueError
+            raise ValueError
+
+    def cmd_set_notification(self, keys):
+        """This method is used to enable notifications to the keyboard object's notifying node of all the keys in argument keys."""
+
+        # We check that the key list only contains valid strings, if it's invalid we raise a ValueError
+        if len(keys) == 0 or max([not x.replace("_", "").isalnum() for x in keys]):
+            # The keys list is invalid, we raise a ValueError
+            raise ValueError
+        else:
+            # The list of keys is valid, so we execute the notify command
+            self.execute_command("@" + str(self.notify_node_nr) + " notify " + "".join(keys))
+
+    def cmd_unset_notification(self, keys):
+        """This method is used to disable notifications to the keyboard object's notifying node of all the keys in argument keys."""
+
+        # We check that the key list only contains valid strings, if it's invalid we raise a ValueError
+        if len(keys) == 0 or max([not x.replace("_", "").isalnum() for x in keys]):
+            # The keys list is invalid, we raise a ValueError
+            raise ValueError
+        else:
+            # The list of keys is valid, so we execute the notify command
+            self.execute_command("@" + str(self.notify_node_nr) + " notify " + ":off ".join(keys) + ":off")
