@@ -29,19 +29,19 @@ def __init__():
         "¨": "rbrace",
         "§": "grave",
         "+": "minus",
-        "=": "0",
-        "!": "1",
-        '""': "2",
-        "#": "3",
-        "¤": "4",
-        "%": "5",
-        "&": "6",
-        "/": "7",
-        "(": "8",
-        ")": "9",
-        ">": "bslash_iso",
-        ";": "comma",
-        ":": "dot",
+        "=": "lshift,0",
+        "!": "lshift,1",
+        '""': "lshift,2",
+        "#": "lshift,3",
+        "¤": "lshift,4",
+        "%": "lshift,5",
+        "&": "lshift,6",
+        "/": "lshift,7",
+        "(": "lshift,8",
+        ")": "lshift,9",
+        ">": "lshift,bslash_iso",
+        ";": "lshift,comma",
+        ":": "lshift,dot",
     }
 
     # Some colors
@@ -60,7 +60,7 @@ def __init__():
     should_exit = False
 
     # The time it will take between activating a key and seeing it in the foreground color
-    activation_time = 0.01
+    activation_time = 0.1
 
     # The thread that is going to do all the actual requests
     request_thread = threading.Thread(target=output_colors)
@@ -90,7 +90,7 @@ def __init__():
 
         else:
             # The user inputted actual data, so we remove all non-alphanumeric chars
-            raw_input = ''.join(ch for ch in raw_input.lower() if ch.isalnum() or ch in special_dict)
+            raw_input = ''.join(ch for ch in raw_input if ch.isalnum() or ch in special_dict)
 
             # We check that there is valid input to send
             if raw_input:
@@ -110,6 +110,12 @@ def output_colors():
             with char_lock:
                 # We process the first char in the list
                 char = char_list.pop(0)
+
+                # If the char is alphabetical and upper case we add leftshift to the char
+                if char.isalpha() and char.isupper():
+                    # We add lshift to show that shift was used
+                    char_list.insert(0, char.lower())
+                    char = "lshift"
 
                 # We check if the char need special handling
                 if char in special_dict:
