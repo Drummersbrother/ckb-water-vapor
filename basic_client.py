@@ -60,7 +60,7 @@ def __init__():
     should_exit = False
 
     # The time it will take between activating a key and seeing it in the foreground color
-    activation_time = 0.1
+    activation_time = 0.5
 
     # The thread that is going to do all the actual requests
     request_thread = threading.Thread(target=output_colors)
@@ -87,6 +87,13 @@ def __init__():
             # We wait for the thread to exit
             request_thread.join()
             exit()
+
+        elif raw_input.startswith("_act_time"):
+            # We change the activation time to the number of seconds the user specifies
+            try:
+                activation_time = float(raw_input[10:])
+            except ValueError:
+                print("Invalid activation time.")
 
         else:
             # The user inputted actual data, so we remove all non-alphanumeric chars
