@@ -39,5 +39,5 @@ This file is a uses the API to communicate with a `falcon_main.py` anywhere on t
 
 
 ### `code_config.json`
-This file stores info that the `keyboard.Keyboard` class needs. It currently only stores a list of supported keyboards, if your's isn't on the list, the `keyboard.Keyboard` class won't accept your keyboard. You can add your own keyboard to it, but I make `fib(0)` guarantees that it will work as expected.
+This file stores info that the `keyboard.Keyboard` class needs. It currently only stores a list of supported keyboards, if yours isn't on the list, the `keyboard.Keyboard` class won't accept your keyboard. You can add your own keyboard to it, but I make `fib(0)` guarantees that it will work as expected.
 
