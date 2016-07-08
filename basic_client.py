@@ -94,6 +94,13 @@ def __init__():
 
     # The main loop
     while True:
+        # We check if we should exit
+        if should_exit:
+            print("Exiting")
+            # IDK if this will ever be needed, but maybe some edge-case somewhere will use this
+            request_thread.join()
+            exit()
+
         # We get text from the user
         raw_input = input("")
 
@@ -134,6 +141,8 @@ def __init__():
 def output_colors():
     """This is what sends the API requests."""
 
+    global should_exit
+
     while True:
         if char_list:
 
@@ -159,15 +168,29 @@ def output_colors():
                         # We look up the key in the key-handling dictionary
                         char = special_dict[char][0]
 
-            # We send a request to the server to make the char (as they will match to the keycodes) to the middle colour
-            requests.post(server_url,
-                          data=json.dumps({"command": "rgb_change_single", "arguments": {"key": char, "color": mc}}))
+            # Try except block to catch connection errors
+            try:
+                # We send a request to the server to make the char (as they will match to the keycodes) to the middle colour
+                requests.post(server_url,
+                              data=json.dumps({"command": "rgb_change_single", "arguments": {"key": char, "color": mc}}))
+            except requests.exceptions.ConnectionError:
+                print("Error when connecting to keyboard server, are you sure the server url is correct? (Press return to exit)")
+                # We signal to the main thread should exit
+                should_exit = True
+                return
 
             time.sleep(activation_time / 2)
 
-            # We send a request to the server to make the char (as they will match to the keycodes) to the foreground color
-            requests.post(server_url,
-                          data=json.dumps({"command": "rgb_change_single", "arguments": {"key": char, "color": fg}}))
+            # Try except block to catch connection errors
+            try:
+                # We send a request to the server to make the char (as they will match to the keycodes) to the foreground color
+                requests.post(server_url,
+                              data=json.dumps({"command": "rgb_change_single", "arguments": {"key": char, "color": fg}}))
+            except requests.exceptions.ConnectionError:
+                print("Error when connecting to keyboard server, are you sure the server is up? (Press return to exit)")
+                # We signal to the main thread should exit
+                should_exit = True
+                return
 
             time.sleep(activation_time / 2)
 
