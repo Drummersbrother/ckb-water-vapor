@@ -226,7 +226,7 @@ class Keyboard(object):
         return "keyboard.Keyboard object:\nKeyboard name: {0:s}\nKeyboard serial number: {1:s}\nKeyboard pollrate: {2:d} ms\nKeyboard path: {3:s}\nKeyboard notify node path: {4:s}\nKeyboard features: {5:s}".format(
             self.verbose_name.strip(), self.serial, self.pollrate, self.keyboard_path, self.notify_path, ", ".join(self.features))
 
-    def execute_command(self, cmd):
+    def execute_command(self, cmd: str):
         """This method is used to use a string as a command to the daemon, only use this if you know what you're doing."""
 
         # We do the file-writing with a lock to ensure thread-safety
@@ -294,7 +294,7 @@ class Keyboard(object):
 
         return notify_content
 
-    def set_key_color(self, key, rgb):
+    def set_key_color(self, key: str, rgb: tuple):
         """This method is used to set a key to a certain rgb (represented as a tuple of ints) color."""
 
         # We check that the input is valid, else we return False
@@ -315,7 +315,7 @@ class Keyboard(object):
             # We return False
             return False
 
-    def set_full_color(self, rgb):
+    def set_full_color(self, rgb: tuple):
         """This method is used to set the whole keyboard to a certain rgb (represented as a tuple of ints) color."""
 
         # Check if the rgb values are valid
@@ -329,7 +329,7 @@ class Keyboard(object):
             # We return True to indicate success
             return True
 
-    def set_multiple_colors(self, keys_and_colors, background=None):
+    def set_multiple_colors(self, keys_and_colors: list, background: tuple=None):
         """This method is used to set multiple keys and (not required) the background to different colors using a single ckb-daemon command.
         keys_and_colors shall be structured like [("w,a,s,d", (255, 255, 0)), ("esc,caps", (0, 0, 255)))]
         """
@@ -382,7 +382,7 @@ class Keyboard(object):
             # We return True to indicate success
             return True
 
-    def cmd_set_fps(self, fps):
+    def cmd_set_fps(self, fps: int):
         """This method is used to set the driver update frequence in updates per second (the fps argument)"""
 
         # We check that the input fps is valid
@@ -394,7 +394,7 @@ class Keyboard(object):
             # The input is invalid so we raise a ValueError
             raise ValueError
 
-    def cmd_set_notification(self, keys):
+    def cmd_set_notification(self, keys: list):
         """This method is used to enable notifications to the keyboard object's notifying node of all the keys in argument keys."""
 
         # We check that the key list only contains valid strings, if it's invalid we raise a ValueError
@@ -405,7 +405,7 @@ class Keyboard(object):
             # The list of keys is valid, so we execute the notify command
             self.execute_command("@" + str(self.notify_node_nr) + " notify " + "".join(keys))
 
-    def cmd_unset_notification(self, keys):
+    def cmd_unset_notification(self, keys: list):
         """This method is used to disable notifications to the keyboard object's notifying node of all the keys in argument keys."""
 
         # We check that the key list only contains valid strings, if it's invalid we raise a ValueError
@@ -523,7 +523,7 @@ class Keyboard_Falcon_Api(object):
             resp.status = falcon.HTTP_400
             resp.body = json.dumps({"message": "Invalid arguments"})
 
-    def is_hex_color(self, string):
+    def is_hex_color(self, string: str):
         """This method returns true if string is a properly formatted (lower case) hex color."""
 
         if len(string) != 6:
