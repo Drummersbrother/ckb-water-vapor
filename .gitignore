@@ -88,9 +88,6 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# Ignore config JSON files
-config.json
-
 # Cached python files
 *.pyc
 

@@ -21,7 +21,7 @@ This class is used as a "Resource" for [falcon](https://falconframework.org/), a
 
 
 ### `__init__.py`
-This file is simply a script that makes the keyboard breathe red with the arrow and wasd keys breathing white. This may change, and is used to test the daemon interaction.
+This file is simply a script that is used to test different interactions with a `keyboard.Keyboard` object.
 
 
 ### `falcon_main.py`
