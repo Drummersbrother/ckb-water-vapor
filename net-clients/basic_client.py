@@ -23,6 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 import json
+import string
 import threading
 import time
 
@@ -68,11 +69,14 @@ def __init__():
         ":": ("dot", True),
     }
 
-    # Some colors
+    # The background, foreground, and middle (a mix between the two) colors
     bg = "000000"
-    # The color to show when transitioning between the states
-    mc = "666666"
-    fg = "ffffff"
+    fg = get_average_color()
+
+    # We calculate the middle color via conversions and simple math
+    mc = "".join([str(format(int(x), "02x")) for x in (
+    int((int(fg[:2], base=16) + int(bg[:2], base=16)) / 2), int((int(fg[2:4], base=16) + int(bg[2:4], base=16)) / 2),
+    int((int(fg[4:6], base=16) + int(bg[4:6], base=16)) / 2))])
 
     # The list of chars that we're going to output to the keyboard
     char_list = []
@@ -174,7 +178,8 @@ def output_colors():
                 requests.post(server_url,
                               data=json.dumps({"command": "set_rgb_single", "arguments": {"key": char, "color": mc}}))
             except requests.exceptions.ConnectionError:
-                print("Error when connecting to keyboard server, are you sure the server url is correct? (Press return to exit)")
+                print(
+                    "Error when connecting to keyboard server, are you sure the server url is correct? (Press return to exit)")
                 # We signal to the main thread should exit
                 should_exit = True
                 return
@@ -201,6 +206,37 @@ def output_colors():
 
         # We don't want to use 100% cpu while idle
         time.sleep(1 / 20)
+
+
+def get_average_color():
+    """This function returns a hex code that is the average color for all the chars that are supported by the program (alphanum + special_chars)."""
+
+    # We make a list of all the characters we support
+    supported_chars = [x for x in string.ascii_lowercase] + [x for x in string.digits] + [val[0] for (key, val) in
+                                                                                          special_dict if
+                                                                                          not val[1]] + "lshift"
+
+    # We make a GET request with the supported chars as the keys list and parse the response as JSON (requests does this for us)
+    key_data = requests.get(server_url, data=json.dumps(
+        {"command": "get_multiple_key_rgb", "arguments": {"keys": supported_chars, "color_format": "ints"}})).json()
+
+    # We check if the API request failed
+    if "message" in key_data:
+        # We return a default color
+        return "ffffff"
+
+    # The request didn't fail in that way, so we check if it failed and didn't give us any data
+    if key_data["keys"] == {}:
+        # We return a default color
+        return "ffffff"
+
+    # We didn't fail, and we got data back, so we make an average of the colors (separately)
+    # We do all of this by abusing list comprehensions
+    avg_color = tuple(
+        [int(sum([t[x] for t in key_data["keys"]]) / len([[t[x] for t in key_data["keys"]]])) for x in range(0, 3)])
+
+    # We return a hex representation of the color
+    return "".join([str(format(int(x), "02x")) for x in avg_color])
 
 
 if __name__ == "__main__":

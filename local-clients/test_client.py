@@ -45,7 +45,6 @@ def main():
         while True:
             time.sleep(1 / 2)
             keyboard.set_multiple_colors([("w,a,s,d,up,left,down,right", (255, 255, 255))], (255, 0, 0))
-            print(keyboard.get_all_key_color_pairs())
 
 if __name__ == "__main__":
     main()
