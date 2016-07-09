@@ -73,6 +73,8 @@ def __init__():
     bg = "000000"
     fg = get_average_color()
 
+    print("Using average color " + fg)
+
     # We calculate the middle color via conversions and simple math
     mc = "".join([str(format(int(x), "02x")) for x in (
     int((int(fg[:2], base=16) + int(bg[:2], base=16)) / 2), int((int(fg[2:4], base=16) + int(bg[2:4], base=16)) / 2),
@@ -113,6 +115,11 @@ def __init__():
             # We send a request to the server to make the whole keyboard the background color
             requests.post(server_url,
                           data=json.dumps({"command": "set_rgb_single", "arguments": {"key": "all", "color": bg}}))
+
+        elif raw_input == "_fill":
+            # We send a request to the keyboard server to make the whole keyboard the foreground color
+            requests.post(server_url,
+                          data=json.dumps({"command": "set_rgb_single", "arguments": {"key": "all", "color": fg}}))
 
         elif raw_input == "_exit":
             # We exit
@@ -212,9 +219,10 @@ def get_average_color():
     """This function returns a hex code that is the average color for all the chars that are supported by the program (alphanum + special_chars)."""
 
     # We make a list of all the characters we support
-    supported_chars = [x for x in string.ascii_lowercase] + [x for x in string.digits] + [val[0] for (key, val) in
-                                                                                          special_dict if
-                                                                                          not val[1]] + "lshift"
+    supported_chars = [x for x in string.ascii_lowercase]\
+                      + [x for x in string.digits]\
+                      + [special_dict[key][0] for _, key in enumerate(special_dict) if not special_dict[key][1]]\
+                      + ["lshift"]
 
     # We make a GET request with the supported chars as the keys list and parse the response as JSON (requests does this for us)
     key_data = requests.get(server_url, data=json.dumps(
@@ -233,7 +241,7 @@ def get_average_color():
     # We didn't fail, and we got data back, so we make an average of the colors (separately)
     # We do all of this by abusing list comprehensions
     avg_color = tuple(
-        [int(sum([t[x] for t in key_data["keys"]]) / len([[t[x] for t in key_data["keys"]]])) for x in range(0, 3)])
+        [int(sum([key_data["keys"][t][x] for t in key_data["keys"]]) / len([key_data["keys"][t][x] for t in key_data["keys"]])) for x in range(3)])
 
     # We return a hex representation of the color
     return "".join([str(format(int(x), "02x")) for x in avg_color])

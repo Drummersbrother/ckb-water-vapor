@@ -42,5 +42,6 @@ This file is a uses the API to communicate with a `falcon_main.py` anywhere on t
 |Command|Description|
 |---|---|
 |`_clear`|Sets the whole server keyboard to black (0, 0, 0).|
-|`_exit`|Exits the basic client, note that this does not affect the server in any way as there is no "connection" to the server, only requests.|
+|`_fill`|Sets the whole server keyboard to the foreground color (which is the average color of all the supported (by the program) keys at the starttime of the program).|
 |`_act_time <seconds>`|Sets the number of seconds each key in the sequence should take to light up.|
+|`_exit`|Exits the basic client, note that this does not affect the server in any way as there is no "connection" to the server, only requests.|
