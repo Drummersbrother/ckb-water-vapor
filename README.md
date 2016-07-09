@@ -27,13 +27,13 @@ This class is used as a "Resource" for [falcon](https://falconframework.org/), a
 ### `keyboard_server_config.json`
 This file stores info that the `keyboard.Keyboard` class needs. It currently only stores a list of supported keyboards, if yours isn't on the list, the `keyboard.Keyboard` class won't accept your keyboard. You can add your own keyboard to it, but I make `fib(0)` guarantees that it will work as expected.
 
-## `local_clients`
+## `/local_clients`
 This folder contains scripts that don't serve the API, but still use the `keyboard.Keyboard` class.
 
 ### `test_client.py`
 This file is simply a script that is used to test different interactions with a `keyboard.Keyboard` object.
 
-## `net_clients`
+## `/net_clients`
 This folder contains scripts that use the API over HTTP. If you make something, please do make a PR so I can include your client here :thumbsup:.
 
 ### `basic_client.py`
