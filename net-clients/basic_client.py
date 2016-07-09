@@ -108,7 +108,7 @@ def __init__():
         if raw_input == "_clear":
             # We send a request to the server to make the whole keyboard the background color
             requests.post(server_url,
-                          data=json.dumps({"command": "rgb_change_single", "arguments": {"key": "all", "color": bg}}))
+                          data=json.dumps({"command": "set_rgb_single", "arguments": {"key": "all", "color": bg}}))
 
         elif raw_input == "_exit":
             # We exit
@@ -172,7 +172,7 @@ def output_colors():
             try:
                 # We send a request to the server to make the char (as they will match to the keycodes) to the middle colour
                 requests.post(server_url,
-                              data=json.dumps({"command": "rgb_change_single", "arguments": {"key": char, "color": mc}}))
+                              data=json.dumps({"command": "set_rgb_single", "arguments": {"key": char, "color": mc}}))
             except requests.exceptions.ConnectionError:
                 print("Error when connecting to keyboard server, are you sure the server url is correct? (Press return to exit)")
                 # We signal to the main thread should exit
@@ -185,7 +185,7 @@ def output_colors():
             try:
                 # We send a request to the server to make the char (as they will match to the keycodes) to the foreground color
                 requests.post(server_url,
-                              data=json.dumps({"command": "rgb_change_single", "arguments": {"key": char, "color": fg}}))
+                              data=json.dumps({"command": "set_rgb_single", "arguments": {"key": char, "color": fg}}))
             except requests.exceptions.ConnectionError:
                 print("Error when connecting to keyboard server, are you sure the server is up? (Press return to exit)")
                 # We signal to the main thread should exit

@@ -21,16 +21,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
-import math
 import time
 
 import keyboard as keyboard_file
 
-
 def main():
     """The main method of the project."""
 
-    # We get the keyboard, if there isn't any keyboards connected, the program will exit here
+    # We get the keyboard, if there aren't any keyboards connected, the program will exit here
     with keyboard_file.Keyboard() as keyboard:
 
         # We print information about the keyboard object
@@ -39,13 +37,15 @@ def main():
         # We set the keyboard fps to 30
         keyboard.cmd_set_fps(30)
 
-        curr_x = 0
+        # We set the rgb colors for some keys
+        keyboard.set_multiple_colors([("w,a,s,d,up,left,down,right", (255, 255, 255))], (255, 0, 0))
+
+        keyboard.cmd_set_notification(["all"])
 
         while True:
-            time.sleep(1 / 30)
-            curr_x += math.pi / 300
-            curr_x %= math.pi * 2
-            keyboard.set_multiple_colors([("w,a,s,d,up,left,down,right", (int(255 * (math.sin(curr_x) + 1) / 2), ) * 3)], (int(255 * (math.sin(curr_x) + 1) / 2), 0, 0))
+            time.sleep(1 / 2)
+            keyboard.set_multiple_colors([("w,a,s,d,up,left,down,right", (255, 255, 255))], (255, 0, 0))
+            print(keyboard.get_all_key_color_pairs())
 
 if __name__ == "__main__":
     main()
