@@ -11,7 +11,7 @@ OK! Here's some info about what files do what :smile:
 ## `/keyboard_server`
 This folder contains the files neccessary to run a http server that serves the API.
 
-### `falcon_main.py`
+### `__init__`
 This file is what serves the API via falcon and `wsgiref.simple_server`. Run this if you want to open the API to your keyboard. Note that the API uses port 42069, so you need to open that port if you want anyone on the internet to control your RGB keyboard.
 
 ### `keyboard.py`
@@ -37,7 +37,7 @@ This file is simply a script that is used to test different interactions with a 
 This folder contains scripts that use the API over HTTP. If you make something, please do make a PR so I can include your client here :thumbsup:.
 
 ### `basic_client.py`
-This file is a uses the API to communicate with a `falcon_main.py` anywhere on the internet. When you run this you will be prompted for the IP or url of the API server (the computer that's running `falcon_main`). After you've put the URL you can input text that (via the API) will light up the corresponding keys on the server keyboard in sequence. There are a couple of commands that can be used by inputting them like regular text.
+This file is a uses the API to communicate with a keyboard server anywhere on the internet. When you run this you will be prompted for the IP or url of the API server (the computer that's running `__init__.py`). After you've put the URL you can input text that (via the API) will light up the corresponding keys on the server keyboard in sequence. There are a couple of commands that can be used by inputting them like regular text.
 
 |Command|Description|
 |---|---|
