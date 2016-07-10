@@ -1,12 +1,12 @@
 # ckb-water-vapor
 A small project to try out the [ckb-daemon](https://github.com/ccMSC/ckb) on linux, it might work on macOS, but I make `fib(0)` guarantees.
 I only have a Corsair K70 RGB, and I only test on ubuntu 16.04, so if you don't match both those things, I, once again, make `fib(0)` guarantees.
-(oh, and the water vapour thing is a cloud :wink:)
+(oh, and the water vapor thing is a cloud :wink:)
 
 # Documentation
 You want to know how to use the code?
-OK! Here's some info about what files do what :smile:
-(I'm probably going to use some incorrect python lingo, but it should be barely understandable atleast)
+OK! Here's some info about what all the files do.
+(I'm probably going to use some incorrect python terminology, but you should be able to understand most of it :smile:)
 
 ## `/keyboard_server`
 This folder contains the files neccessary to run a http server that serves the API.
