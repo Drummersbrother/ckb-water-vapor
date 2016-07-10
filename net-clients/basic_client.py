@@ -54,6 +54,7 @@ def __init__():
         "¨": ("rbrace", False),
         "§": ("grave", False),
         "+": ("minus", False),
+        "´": ("equal", False),
         "=": ("0", True),
         "!": ("1", True),
         '"': ("2", True),
@@ -64,9 +65,14 @@ def __init__():
         "/": ("7", True),
         "(": ("8", True),
         ")": ("9", True),
+        "?": ("minus", True),
+        "`": ("equal", True),
         ">": ("bslash_iso", True),
         ";": ("comma", True),
         ":": ("dot", True),
+        "^": ("rbrace", True),
+        "*": ("hash", True),
+        "½": ("grave", True),
     }
 
     # The background, foreground, and middle (a mix between the two) colors
@@ -90,7 +96,7 @@ def __init__():
     should_exit = False
 
     # The time it will take between activating a key and seeing it in the foreground color
-    activation_time = 0.5
+    activation_time = 0
 
     # The thread that is going to do all the actual requests
     request_thread = threading.Thread(target=output_colors)

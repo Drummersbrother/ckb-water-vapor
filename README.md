@@ -9,7 +9,7 @@ OK! Here's some info about what all the files do.
 (I'm probably going to use some incorrect python terminology, but you should be able to understand most of it :smile:)
 
 ## `/keyboard_server`
-This folder contains the files neccessary to run a http server that serves the API.
+This folder contains the files necessary to run a http server that serves the API.
 
 ### `__init__.py`
 This file is what serves the API via falcon and `wsgiref.simple_server`. Run this if you want to open the API to your keyboard. Note that the API uses port 42069, so you need to open that port if you want anyone on the internet to control your RGB keyboard.

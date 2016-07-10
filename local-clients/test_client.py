@@ -43,8 +43,14 @@ def main():
         keyboard.cmd_set_notification(["all"])
 
         while True:
-            time.sleep(1 / 2)
+            time.sleep(1 / 10)
+            start_time = time.time()
             keyboard.set_multiple_colors([("w,a,s,d,up,left,down,right", (255, 255, 255))], (255, 0, 0))
+            notifs = keyboard.get_notifications()
+
+            if notifs:
+                print(notifs)
+                print("Time taken for color change and notification request:", time.time() - start_time)
 
 if __name__ == "__main__":
     main()

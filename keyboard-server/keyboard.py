@@ -24,6 +24,8 @@ DEALINGS IN THE SOFTWARE.
 
 import json
 import os.path
+import select
+import stat
 import sys
 import threading
 import time
@@ -168,11 +170,14 @@ class Keyboard(object):
         used_notify_nodes = []
 
         # We check what notifying nodes are being used
-        for i in range(1, 10):
+        for i in range(0, 10):
             # We check if the file exists as a notifying node
-            if os.path.isfile(self.keyboard_path + "notify" + str(i)):
-                # We append the number to the list of used nodes
-                used_notify_nodes.append(i)
+            try:
+                if stat.S_ISFIFO(os.stat(self.keyboard_path + "notify" + str(i)).st_mode):
+                    # We append the number to the list of used nodes
+                    used_notify_nodes.append(i)
+            except FileNotFoundError:
+                continue
 
         # We find a notify node number that isn't used
         # If all notify nodes are being used we tell the user that there aren't any nodes available and exit
@@ -188,7 +193,7 @@ class Keyboard(object):
                 "All notifying nodes are being used, please check what programs are using the keyboard and try again.")
             exit()
 
-        # We create various Lock objects to mak the whole class thread-safe
+        # We create various Lock objects to make the whole class thread-safe
         self.cmd_lock = threading.Lock()
         self.notify_lock = threading.Lock()
 
@@ -210,10 +215,26 @@ class Keyboard(object):
         # We make this device go into software controlled mode
         self.execute_command("active")
 
+        # We create a variable to signal if we're exiting
+        self.exiting = False
+
+        # We create a variable that stores all unread notifications
+        self.unread_notifications = ""
+
+        # We create a thread that's going to read from the notification node
+        self.notification_thread = threading.Thread(target=self._notification_read_thread)
+
+        # We start the notification thread
+        self.notification_thread.start()
+
         return self
 
     def __exit__(self, *args):
         """This method is called when the instance exits the with statement and needs to be closed again."""
+
+        # We tell our notification thread to exit and then wait for it to do so (might take a while as it might be blocked)
+        self.exiting = True
+        self.notification_thread.join()
 
         # We close the notifying node for this device
         self.execute_command("notifyoff " + str(self.notify_node_nr))
@@ -242,26 +263,15 @@ class Keyboard(object):
 
     def get_notifications(self):
         """This method is used to get the unread notifications from the keyboard notification node.
-        Note that this blocks until there is data to read, so only use this directly if you know what you're doing.
+        It gets the unread notifications from the notification poll thread, that continuously tried to read a line (a notification) from the notifying node.
         """
 
-        # FIXME This is not getting notifications (only command responses), I'm not seeing them at all actually, how the fuck do I get this to work??!??
-
-        # We do the file-reading with a lock to ensure thread-safety
         with self.notify_lock:
-            notify_raw_content = ""
-            # We read and save the contents of the notify file for the keyboards
-            with open(self.notify_path) as notify_file:
-                if os.path.exists(self.notify_path):
-                    notify_raw_content += notify_file.readline()
-                else:
-                    # We don't have a notification node, so we print an error and exit
-                    print(
-                        "Could not find notification node, please make sure that ckb-daemon is running and that the keyboard hasn't been unplugged and try again")
-                    exit()
+            notify_raw_content = self.unread_notifications
+            self.unread_notifications = ""
 
         # We make a list of all the separate words in the notify file, by splitting the content by space
-        notify_content = [x.strip() for x in notify_raw_content.split(" ") if len(x.strip()) > 0]
+        notify_content = [x.strip() for x in notify_raw_content.split("\n") if len(x.strip()) > 0]
 
         return notify_content
 
@@ -452,6 +462,33 @@ class Keyboard(object):
             # The list of keys is valid, so we execute the notify command
             self.execute_command("@" + str(self.notify_node_nr) + " notify " + ":off ".join(keys) + ":off")
 
+    def _notification_read_thread(self):
+        """This method is used as a thread target and is what reads the notification node."""
+
+        while True:
+            # We check if we should exit
+            if not self.exiting:
+                # We read and save the contents of the notify file for the keyboards
+                with open(self.notify_path, buffering=1) as notify_file:
+                    if os.path.exists(self.notify_path):
+                        # We check and wait for data to be read, but we timeout after one second as to not miss if we should exit
+                        read, _, _ = select.select([notify_file], [], [], 1 / 60)
+                        if read:
+                            # We read the data and add it to the unread_notifications variable
+                            notify_temp_content = notify_file.readline()
+
+                            # We acquire the lock for notifications
+                            with self.notify_lock:
+                                self.unread_notifications += notify_temp_content
+
+                    else:
+                        # We don't have a notification node, so we print an error and exit
+                        print(
+                            "Could not find notification node, please make sure that ckb-daemon is running and that the keyboard hasn't been unplugged and try again")
+                        exit()
+
+            else:
+                return
 
 class Keyboard_Falcon_Api(object):
     """This class represents and handler the HTTP REST api for a keyboard object."""
